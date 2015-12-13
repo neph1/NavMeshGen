@@ -44,7 +44,7 @@ public class NavMeshGenerator implements Savable {
     private float contourSampleDistance = 25;
     private float contourMaxDeviation = 25;
     private IntermediateData intermediateData;
-    private int timeout = 10000;
+    private int timeout = 30000;
 
     public NavMeshGenerator() {
     }
@@ -98,6 +98,7 @@ public class NavMeshGenerator implements Savable {
 
         TriangleMesh triMesh = buildNavMesh(positions, indices, intermediateData);
         if (triMesh == null) {
+            Logger.getGlobal().log(Level.WARNING, "Trimesh is null, returning null");
             return null;
         }
 
@@ -118,7 +119,7 @@ public class NavMeshGenerator implements Savable {
         try {
             execute(runnable, timeout);
         } catch (TimeoutException ex) {
-            Logger.getGlobal().log(Level.FINE, "NavMesh Generation timed out.");
+            Logger.getGlobal().log(Level.WARNING, "NavMesh Generation timed out. " + ex.getMessage());
         }
         return runnable.getTriMesh();
     }
