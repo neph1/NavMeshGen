@@ -12,9 +12,10 @@ import com.jme3.scene.Node;
 import com.jme3.scene.VertexBuffer.Type;
 import com.jme3.scene.mesh.IndexBuffer;
 import com.jme3.terrain.Terrain;
-import com.sun.media.jfxmedia.logging.Logger;
 import java.io.IOException;
 import java.nio.FloatBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.critterai.nmgen.IntermediateData;
 import org.critterai.nmgen.NavmeshGenerator;
 import org.critterai.nmgen.TriangleMesh;
@@ -117,7 +118,7 @@ public class NavMeshGenerator implements Savable {
         try {
             execute(runnable, timeout);
         } catch (TimeoutException ex) {
-            Logger.logMsg(0, "NavMesh Generation timed out.");
+            Logger.getGlobal().log(Level.FINE, "NavMesh Generation timed out.");
         }
         return runnable.getTriMesh();
     }
