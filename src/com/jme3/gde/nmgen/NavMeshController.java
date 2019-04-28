@@ -19,6 +19,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jme3tools.optimize.GeometryBatchFactory;
 import org.critterai.nmgen.IntermediateData;
 
@@ -27,6 +29,7 @@ import org.critterai.nmgen.IntermediateData;
  * @author sploreg
  */
 public class NavMeshController {
+
     private Node rootNode;
     private Application app;
     //private NavMesh navMesh; // current nav mesh in this scene
@@ -36,52 +39,42 @@ public class NavMeshController {
         this.app = app;
         this.rootNode = rootNode;
     }
-    
+
     protected void cleanup() {
-        
+
     }
-    
-    public Mesh generateNavMesh(float cellSize, 
-            float cellHeight, 
-            float minTraversableHeight, 
-            float maxTraversableStep, 
-            float maxTraversableSlope, 
-            boolean clipLedges, 
-            float traversableAreaBorderSize, 
-            float smoothingThreshold, 
-            boolean useConservativeExpansion, 
-            float minUnconnectedRegionSize, 
-            float mergeRegionSize, 
-            float maxEdgeLength, 
-            float edgeMaxDeviation, 
-            float maxVertsPerPoly, 
-            float contourSampleDistance, 
-            float contourMaxDeviation) 
-    {
-        NavMeshGenerator generator = new NavMeshGenerator();
-        generator.setCellSize(cellSize);
-        generator.setCellHeight(cellHeight);
-        generator.setMinTraversableHeight(minTraversableHeight);
-        generator.setMaxTraversableStep(maxTraversableStep);
-        generator.setMaxTraversableSlope(maxTraversableSlope);
-        generator.setClipLedges(clipLedges);
-        generator.setTraversableAreaBorderSize(traversableAreaBorderSize);
-        generator.setSmoothingThreshold((int)smoothingThreshold);
-        generator.setUseConservativeExpansion(useConservativeExpansion);
-        generator.setMergeRegionSize((int)mergeRegionSize);
-        generator.setMaxEdgeLength(maxEdgeLength);
-        generator.setEdgeMaxDeviation(edgeMaxDeviation);
-        generator.setMaxVertsPerPoly((int)maxVertsPerPoly);
-        generator.setContourSampleDistance(contourSampleDistance);
-        generator.setContourMaxDeviation(contourMaxDeviation);
+
+//    
+//    public Mesh generateNavMesh(float cellSize, 
+//            float cellHeight, 
+//            float minTraversableHeight, 
+//            float maxTraversableStep, 
+//            float maxTraversableSlope, 
+//            boolean clipLedges, 
+//            float traversableAreaBorderSize, 
+//            float smoothingThreshold, 
+//            boolean useConservativeExpansion, 
+//            float minUnconnectedRegionSize, 
+//            float mergeRegionSize, 
+//            float maxEdgeLength, 
+//            float edgeMaxDeviation, 
+//            float maxVertsPerPoly, 
+//            float contourSampleDistance, 
+//            float contourMaxDeviation) 
+//    {
+    public Mesh generateNavMesh(NavMeshProperties properties) {
+        Logger.getLogger(NavMeshController.class.getSimpleName()).log(Level.INFO, "Generating new navmesh...");
         
-        IntermediateData id = new IntermediateData();
-        
-        generator.setIntermediateData(null);
-        
+        long startTime = System.currentTimeMillis();
+        NavMeshGenerator generator = new NavMeshGenerator(properties);
+
+//        IntermediateData id = new IntermediateData();
+//
+//        generator.setIntermediateData(null);
+
         Mesh mesh = new Mesh();
         //NavMesh navMesh = new NavMesh();
-        
+
         GeometryBatchFactory.mergeGeometries(findGeometries(rootNode, new LinkedList<Geometry>(), generator), mesh);
         Mesh optiMesh = generator.optimize(mesh);
 
@@ -89,24 +82,23 @@ public class NavMeshController {
         navMesh.setMesh(optiMesh);
         navMesh.setCullHint(CullHint.Always);
         navMesh.setModelBound(new BoundingBox());
-        
         Spatial previous = rootNode.getChild("NavMesh");
-        if (previous != null)
+        if (previous != null) {
             previous.removeFromParent();
-        
+        }
+
         app.enqueue(new Callable<Void>() {
             public Void call() throws Exception {
                 rootNode.attachChild(navMesh);
                 return null;
             }
         });
-        
+
+        Logger.getLogger(NavMeshController.class.getSimpleName()).log(Level.INFO, "Generated navmesh in " + (System.currentTimeMillis() - startTime) + " ms");
         //jmeRootNode.refresh(true);
-        
         return optiMesh;
     }
-  
-    
+
     private List<Geometry> findGeometries(Node node, List<Geometry> geoms, NavMeshGenerator generator) {
         for (Iterator<Spatial> it = node.getChildren().iterator(); it.hasNext();) {
             Spatial spatial = it.next();
@@ -114,24 +106,26 @@ public class NavMeshController {
                 geoms.add((Geometry) spatial);
             } else if (spatial instanceof Node) {
                 if (spatial instanceof Terrain) {
-                    Mesh merged = generator.terrain2mesh((Terrain)spatial);
+                    Mesh merged = generator.terrain2mesh((Terrain) spatial);
                     Geometry g = new Geometry("mergedTerrain");
                     g.setMesh(merged);
                     geoms.add(g);
-                } else 
+                } else {
                     findGeometries((Node) spatial, geoms, generator);
+                }
             }
         }
         return geoms;
     }
 
     private Material getNavMaterial() {
-        if (navMaterial != null)
+        if (navMaterial != null) {
             return navMaterial;
+        }
         navMaterial = new Material(app.getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
         navMaterial.setColor("Color", ColorRGBA.Green);
         navMaterial.getAdditionalRenderState().setWireframe(true);
         return navMaterial;
     }
-    
+
 }
